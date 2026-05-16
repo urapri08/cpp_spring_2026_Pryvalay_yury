@@ -2,68 +2,85 @@
 #include "../include/Services.h"
 #include "../include/Domain.h"
 #include <iostream>
-#include <cstdlib>
-#include <stdexcept>
+#include <string>
+#include <locale>
 
-void hard_crash_test() {
-  SimpleDI crash_di;
-
-  crash_di.registerSingleton<IVetClinic>("VetClinic", [](SimpleDI&) {
-    return new VetClinic();
-    });
-
-  crash_di.registerSingleton<IZoo>("Zoo", [](SimpleDI& c) {
-    return new Zoo(c.resolve<IVetClinic>("VetClinic"));
-    });
-
-  auto zoo_srv = crash_di.resolve<IZoo>("Zoo");
-
-  zoo_srv->addAnimal(nullptr);
-  zoo_srv->addThing(nullptr);
-
-  try {
-    auto fake_srv = crash_di.resolve<IVetClinic>("FakeService");
-    std::cout << "Ошибка: Контейнер не выбросил исключение!\n";
-  }
-  catch (const std::runtime_error& e) {
-    std::cout << "Контейнер див " << e.what() << "\n";
-  }
-
-  for (int i = 0; i < 10000; ++i) {
-    zoo_srv->addAnimal(new Wolf("Клон Нитаньяху", 5, 10000 + i, false));
-    zoo_srv->addAnimal(new Rabbit("Клон Багирова", 2, 20000 + i, 10, true));
-    zoo_srv->addThing(new Table(30000 + i));
-  }
-
-  std::cout << "Стресс-тест пройден\n";
+void printMenu() {
+  std::cout << "\n=== ERP Московского Зоопарка ===\n";
+  std::cout << "1. Добавить обезьяну\n";
+  std::cout << "2. Добавить кролика\n";
+  std::cout << "3. Добавить тигра\n";
+  std::cout << "4. Добавить стол\n";
+  std::cout << "5. Добавить компьютер\n";
+  std::cout << "6. Посчитать требуемую еду\n";
+  std::cout << "7. Вывести контактный зоопарк\n";
+  std::cout << "8. Вывести инвентаризацию\n";
+  std::cout << "0. Выход\n";
+  std::cout << "Ваш выбор: ";
 }
 
 int main() {
-  system("chcp 65001 > nul");
 
-  hard_crash_test();
+  setlocale(LC_ALL, "");
 
   SimpleDI container;
-
   container.registerSingleton<IVetClinic>("VetClinic", [](SimpleDI&) {
-    return new VetClinic();
+    return std::make_shared<VetClinic>();
     });
 
   container.registerSingleton<IZoo>("Zoo", [](SimpleDI& c) {
-    return new Zoo(c.resolve<IVetClinic>("VetClinic"));
+    return std::make_shared<Zoo>(c.resolve<IVetClinic>("VetClinic"));
     });
 
-  auto zoo_service = container.resolve<IZoo>("Zoo");
+  auto zoo = container.resolve<IZoo>("Zoo");
+  int choice = -1;
 
-  zoo_service->addAnimal(new Monkey("Обезьяна Бама", 3, 1001, 8, true));
-  zoo_service->addAnimal(new Rabbit("Кролик Джефри", 1, 1002, 3, true));
-  zoo_service->addAnimal(new Tiger("Тигр Лунтик ", 10, 1003, true));
-  zoo_service->addAnimal(new Wolf("Волк Вульф", 5, 1004, false));
-  zoo_service->addAnimal(new Rabbit("Кролик кролик", 2, 1005, 10, true));
-  zoo_service->addThing(new Table(2001));
-  zoo_service->addThing(new Computer(2002));
-  std::cout << "\nВсего еды требуется в день: " << zoo_service->getTotalFood() << " кг\n";
-  zoo_service->printContactZoo();
-  zoo_service->printInventory();
+  while (choice != 0) {
+    printMenu();
+    if (!(std::cin >> choice)) {
+      std::cin.clear();
+      std::cin.ignore(10000, '\n');
+      continue;
+    }
+
+    if (choice == 1) {
+      std::cout << "Введите имя (без пробелов), кг еды, инв.номер, доброту(0-10) и здоровье(1-здоров, 0-болен):\n";
+      std::string name; int f, n, k; bool h;
+      std::cin >> name >> f >> n >> k >> h;
+      zoo->addAnimal(std::make_shared<Monkey>(name, f, n, k, h));
+    }
+    else if (choice == 2) {
+      std::cout << "Введите имя (без пробелов), кг еды, инв.номер, доброту(0-10) и здоровье(1-здоров, 0-болен):\n";
+      std::string name; int f, n, k; bool h;
+      std::cin >> name >> f >> n >> k >> h;
+      zoo->addAnimal(std::make_shared<Rabbit>(name, f, n, k, h));
+    }
+    else if (choice == 3) {
+      std::cout << "Введите имя (без пробелов), кг еды, инв.номер и здоровье(1-здоров, 0-болен):\n";
+      std::string name; int f, n; bool h;
+      std::cin >> name >> f >> n >> h;
+      zoo->addAnimal(std::make_shared<Tiger>(name, f, n, h));
+    }
+    else if (choice == 4) {
+      std::cout << "Введите инвентарный номер стола: ";
+      int n; std::cin >> n;
+      zoo->addThing(std::make_shared<Table>(n));
+    }
+    else if (choice == 5) {
+      std::cout << "Введите инвентарный номер компьютера: ";
+      int n; std::cin >> n;
+      zoo->addThing(std::make_shared<Computer>(n));
+    }
+    else if (choice == 6) {
+      std::cout << "\nВсего еды требуется в день: " << zoo->getTotalFood() << " кг\n";
+    }
+    else if (choice == 7) {
+      zoo->printContactZoo();
+    }
+    else if (choice == 8) {
+      zoo->printInventory();
+    }
+  }
+
   return 0;
 }
